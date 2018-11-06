@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-module
+  type="WEB"
+  name="PayPlatform"
+  id="myeclipse.1413159514515"
+  context-root="/PayPlatform"
+  j2ee-spec="5.0"
+  archive="PayPlatform.war">
+  <attributes>
+    <attribute name="webrootdir" value="WebRoot" />
+  </attributes>
+</project-module>
+

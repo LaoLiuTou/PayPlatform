@@ -1,0 +1,67 @@
+<html lang="zh-cn">
+  <head>
+     
+    <title>My JSP 'index.jsp' starting page</title>
+    
+	<meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="expires" content="0">    
+	<meta http-equiv="keywords" content="keyword1,keyword2,keyword3">
+	<meta http-equiv="description" content="This is my page">
+	<!--
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	-->
+	<script type="text/javascript" src="js/jquery-1.8.1.min.js"></script>
+	<script src="js/md5.js"></script>  
+	<script type="text/javascript">
+	$(document).ready(function(){
+		$("#start").click(function(){
+	 
+		  var params = new Array();
+		  	   /* var temp={};
+             temp['HOUSE_ID']='111';
+             params.push(temp); 
+             temp['HOUSE_ID']='22';
+             params.push(temp); 
+             console.log(JSON.stringify(params));  */
+			 $.ajax({
+	           //url:'http://192.168.1.144/DeerFarm/addDeer',
+	           //url:'http://192.168.1.144/PayPlatform/listArea',
+	           url:'http://192.168.1.144/PayPlatform/getOpenId',
+	           type:"POST",
+	           //data : {'page':'1','size':'10'}, 
+	           data: {"code":"111111"},   
+	           //data : {'house_id':'111','birthday':'2018-04-28','mating_dt':'2018-04-28 12:22:20','rule_id':'1','rule':'{"15":"1","16":"8","17":"10","18":"2018-04-28","19":""}'},
+	           //data : JSON.stringify([{'house_id':'1','keep_flg':'10'},{'house_id':'11','keep_flg':'101'}]),
+	           //headers: { 'content-Type': 'application/json' },
+	            
+			   /* headers: {
+			       //'content-Type': 'application/json'
+			    }, */  
+    			
+	           success:function(response) {
+	            console.log(response);
+	            $("#token").text(JSON.stringify(response));
+	 
+	            
+				   
+	           },
+	           error:function(response){
+	           	alert("wrong");   
+	           }   
+	         }); 
+		});
+	
+	}); 
+	</script>
+  </head>
+  
+  <body>
+  TOKEN:<div id="token"></div>
+  RESULT:<div id="result"></div>
+  <input type="button" id="start" value="测试">
+  
+  </body>
+</html>
+
+
