@@ -41,6 +41,9 @@ public class WXPayConstants {
     public static final String REPORT_URL_SUFFIX       = "/payitil/report";
     public static final String SHORTURL_URL_SUFFIX     = "/tools/shorturl";
     public static final String AUTHCODETOOPENID_URL_SUFFIX = "/tools/authcodetoopenid";
+    public static final String PAYTOCHANGE_URL_SUFFIX = "/mmpaymkttransfers/promotion/transfers";
+    public static final String PAYTOBANK_URL_SUFFIX = "/mmpaysptrans/pay_bank";
+    public static final String QUERY_BANK_URL_SUFFIX = "/mmpaysptrans/query_bank";
 
     // sandbox
     public static final String SANDBOX_MICROPAY_URL_SUFFIX     = "/sandboxnew/pay/micropay";
@@ -54,6 +57,12 @@ public class WXPayConstants {
     public static final String SANDBOX_REPORT_URL_SUFFIX       = "/sandboxnew/payitil/report";
     public static final String SANDBOX_SHORTURL_URL_SUFFIX     = "/sandboxnew/tools/shorturl";
     public static final String SANDBOX_AUTHCODETOOPENID_URL_SUFFIX = "/sandboxnew/tools/authcodetoopenid";
+    public static final String SANDBOX_PAYTOCHANGE_URL_SUFFIX = "/sandboxnew/mmpaymkttransfers/promotion/transfers";
+    public static final String SANDBOX_PAYTOBANK_URL_SUFFIX = "/sandboxnew/mmpaysptrans/pay_bank";
+    public static final String SANDBOX_QUERY_BANK_URL_SUFFIX = "/sandboxnew/mmpaysptrans/query_bank";
 
+    
+    // 获取RSA加密公钥
+ 	private static final String GETPUBLICKEY_URL = "https://fraud.mch.weixin.qq.com/risk/getpublickey";
 }
 

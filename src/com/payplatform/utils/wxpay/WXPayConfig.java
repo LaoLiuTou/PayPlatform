@@ -1,6 +1,8 @@
 package com.payplatform.utils.wxpay;
 
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public abstract class WXPayConfig {
 
@@ -32,6 +34,12 @@ public abstract class WXPayConfig {
      * @return Mch ID
      */
     abstract String getMchID();
+    /**
+     * 获取 Mch app_ID
+     *
+     * @return Mch app_ID
+     */
+    abstract String getMchAppID();
 
 
     /**
@@ -40,6 +48,18 @@ public abstract class WXPayConfig {
      * @return API密钥
      */
     abstract String getKey();
+    /**
+     * 获取 pkcs8
+     *
+     * @return API密钥
+     */
+    abstract String getPkcs8();
+    /**
+     * 银行
+     *
+     * @return API密钥
+     */
+    abstract  Map<String,String> getBankCode();
 
 
     /**
@@ -111,5 +131,6 @@ public abstract class WXPayConfig {
     public int getReportBatchSize() {
         return 10;
     }
+    
 
 }

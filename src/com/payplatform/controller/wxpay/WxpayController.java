@@ -1,32 +1,31 @@
 package com.payplatform.controller.wxpay;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-import com.fasterxml.jackson.databind.JavaType;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.payplatform.utils.HttpRequest;
 import com.payplatform.utils.PayCommonUtil;
+import com.payplatform.utils.RSAUtils;
 import com.payplatform.utils.wxpay.IWxPayConfig;
 import com.payplatform.utils.wxpay.WXPay;
-import com.payplatform.utils.wxpay.WXPayConfig;
 import com.payplatform.utils.wxpay.WXPayUtil;
 @Controller
 public class WxpayController {
@@ -116,6 +115,7 @@ public class WxpayController {
 		    return result;
 		} catch (Exception e) {
 			 e.printStackTrace();
+			 logger.info("支付失败："+e.getMessage());
 			 return null;
 		}
  
@@ -154,6 +154,16 @@ public class WxpayController {
 	        }
 	        resXml=sb.toString();
 	        logger.info("微信支付异步通知请求包: {}"+ resXml);
+	        
+	        // ------------------------------
+            // 处理业务完毕
+            // ------------------------------
+            BufferedOutputStream out = new BufferedOutputStream(response.getOutputStream());
+            out.write(resXml.getBytes());
+            out.flush();
+            out.close();
+
+ 
 	        return payBack(resXml);
 	    }catch (Exception e){
 	    	 e.printStackTrace();
@@ -163,6 +173,7 @@ public class WxpayController {
 	    }
 	}
  
+	@SuppressWarnings("unchecked")
 	public String payBack(String notifyData) {
 	    logger.info("payBack() start, notifyData={}"+ notifyData);
 	    String xmlBack="";
@@ -185,9 +196,35 @@ public class WxpayController {
 	                return xmlBack;
 	            }
 
-	            // 业务逻辑处理 ****************************
+	            
 	            logger.info("微信支付回调成功订单号: {}"+notifyMap);
-	            xmlBack = "<xml>" + "<return_code><![CDATA[SUCCESS]]></return_code>" + "<return_msg><![CDATA[SUCCESS]]></return_msg>" + "</xml> ";
+	            if(return_code.equals("SUCCESS")){
+	            	// 业务逻辑处理 ****************************
+	            	Properties properties = new Properties();
+	        		String base = IWxPayConfig.class.getResource("/")
+	        				.getPath();
+	        		 
+	        		properties.load(new FileInputStream(base
+	        					+ "config/config.properties"));
+	            	String url=properties.getProperty("service_url").trim();
+	                Map<String,String> header=new HashMap<String,String>();
+	                header.put("source", "xcx");
+	                Map<String,String> map=new HashMap<String,String>();
+	                map.put("pay_id", out_trade_no); 
+	                map.put("status", "1");
+	                String updateResult=HttpRequest.postMap(url, header,map);
+	                ObjectMapper objectMapper = new ObjectMapper();
+	    			Map<String,String> updateMap = (Map<String,String>)objectMapper.readValue(updateResult, Map.class);
+	    			if(updateMap.get("status").equals("0")){
+	    				xmlBack = "<xml>" + "<return_code><![CDATA[SUCCESS]]></return_code>" + "<return_msg><![CDATA[OK]]></return_msg>" + "</xml> ";
+	    			}
+	    			else{
+	    				xmlBack = "<xml>" + "<return_code><![CDATA[FAIL]]></return_code>" + "<return_msg><![CDATA[业务处理失败]]></return_msg>" + "</xml> ";
+	    			}
+	                logger.info("Post请求:"+updateResult);
+	            	
+	            }
+	            //xmlBack = "<xml>" + "<return_code><![CDATA[SUCCESS]]></return_code>" + "<return_msg><![CDATA[OK]]></return_msg>" + "</xml> ";
 	            return xmlBack;
 	        } else {
 	            logger.error("微信支付回调通知签名错误");
@@ -219,10 +256,65 @@ public class WxpayController {
 	        Map<String, String> data = new HashMap<String, String>();
 	        data.put("out_trade_no", out_trade_no);
 	        resp = wxpay.orderQuery(data);
-            System.out.println(resp);
+             
         } catch (Exception e) {
             e.printStackTrace();
         }
+		return resp;
+
+	}
+	
+	/**
+	  * 退款
+	  * @return
+	  */
+	@SuppressWarnings("rawtypes")
+	@RequestMapping("/orderRefund")
+	@ResponseBody
+	public Map orderRefund(HttpServletRequest request){
+		Map<String, String> resp = new HashMap<String, String>();
+		try {
+			String out_trade_no = request.getParameter("out_trade_no");
+			String refund_fee = request.getParameter("refund_fee");
+			if(out_trade_no!=null&&refund_fee!=null){
+				IWxPayConfig iWxPayConfig = new IWxPayConfig();
+				WXPay wxpay = new WXPay(iWxPayConfig);
+				
+				Map<String, String> data = new HashMap<String, String>();
+		        data.put("out_trade_no", out_trade_no);
+		        Map<String, String> respsearch = wxpay.orderQuery(data);
+		        String result_code = respsearch.get("result_code");
+			    if ("SUCCESS".equals(result_code)) {
+			    	String nonceStr=PayCommonUtil.getRandomString(32);
+			    	String total_fee = respsearch.get("total_fee");
+			    	String transaction_id = respsearch.get("transaction_id");
+			    	
+			    	Map<String, String> wxPayMap = new HashMap<String, String>();
+				    wxPayMap.put("appid", iWxPayConfig.getMchAppID());
+				    wxPayMap.put("mch_id", iWxPayConfig.getMchID());
+				    wxPayMap.put("nonce_str", nonceStr);
+				    wxPayMap.put("out_refund_no", (int)((Math.random()*9+1)*100000)+out_trade_no);
+				    wxPayMap.put("out_trade_no", out_trade_no);
+				    wxPayMap.put("refund_fee", (int)(Float.parseFloat(refund_fee)*100)+"");
+				    wxPayMap.put("total_fee", total_fee);
+				    wxPayMap.put("transaction_id", transaction_id);
+				    //wxPayMap.put("signType", "MD5");
+				    String refundSign = WXPayUtil.generateSignature(wxPayMap, iWxPayConfig.getKey());
+				    wxPayMap.put("sign", refundSign);
+			        resp = wxpay.refund(wxPayMap);
+			         
+			    }
+			   
+			}
+			else{
+				resp.put("result_code", "FAIL");
+				resp.put("err_code", "PARAMISNULL");
+			}
+			 
+       } catch (Exception e) {
+           e.printStackTrace();
+           logger.info("退款失败："+e.getMessage());
+       }
 		return resp;
 
 	}
@@ -277,4 +369,118 @@ public class WxpayController {
             }  
         }   
 	} 
+	
+	
+	/**
+	  * 企业付款到零钱
+	  * @return
+	  */
+	@SuppressWarnings("rawtypes")
+	@RequestMapping("/payToChange")
+	@ResponseBody
+	public Map payToChange(HttpServletRequest request){
+		Map<String, String> resp = new HashMap<String, String>();
+		try {
+			IWxPayConfig iWxPayConfig = new IWxPayConfig();
+			WXPay wxpay = new WXPay(iWxPayConfig);
+			String nonceStr=PayCommonUtil.getRandomString(32);
+			String openid = request.getParameter("openid");
+			String partnertradeno = request.getParameter("partnertradeno");
+			String amount = request.getParameter("amount");
+			String spbill_create_ip = PayCommonUtil.getIpAddr(request);
+			
+			Map<String, String> params = new HashMap<String, String>();
+	        params.put("mch_appid", iWxPayConfig.getMchAppID());
+	        params.put("mchid", iWxPayConfig.getMchID());
+	        params.put("nonce_str", nonceStr);
+	        params.put("partner_trade_no", partnertradeno);
+	        params.put("openid", openid);
+	        params.put("check_name", "NO_CHECK");
+	        params.put("amount", amount);
+	        params.put("desc", "链鹿平台转账");
+	        params.put("spbill_create_ip", spbill_create_ip);
+		    String refundSign = WXPayUtil.generateSignature(params, iWxPayConfig.getKey());
+		    params.put("sign", refundSign);
+		    
+		    
+	        resp = wxpay.payToChange(params);
+       } catch (Exception e) {
+           e.printStackTrace();
+           logger.info("企业付款到零钱："+e.getMessage());
+       }
+		return resp;
+
+	}
+	/**
+	  * 企业付款到银行卡
+	  * @return
+	  */
+	@SuppressWarnings("rawtypes")
+	@RequestMapping("/payToBank")
+	@ResponseBody
+	public Map payToBank(HttpServletRequest request){
+		Map<String, String> resp = new HashMap<String, String>();
+		try {
+			IWxPayConfig iWxPayConfig = new IWxPayConfig();
+			String PUBLIC_KEY =iWxPayConfig.getPkcs8();
+			WXPay wxpay = new WXPay(iWxPayConfig);
+			String nonceStr=PayCommonUtil.getRandomString(32);
+			String cardNum = request.getParameter("cardnum");
+			String owner = request.getParameter("owner");
+			String bank = request.getParameter("bank");
+			String partnertradeno = request.getParameter("partnertradeno");
+			String amount = request.getParameter("amount");
+			Map<String, String> params = new HashMap<String, String>();
+			params.put("mch_id", iWxPayConfig.getMchID());
+            params.put("partner_trade_no", partnertradeno);
+            params.put("nonce_str", nonceStr);
+            params.put("enc_bank_no", RSAUtils.encryptByPublicKeyByWx(cardNum, PUBLIC_KEY));//收款方银行卡号
+            params.put("enc_true_name", RSAUtils.encryptByPublicKeyByWx(owner, PUBLIC_KEY));//收款方用户名    
+            params.put("bank_code", iWxPayConfig.getBankCode().get(bank));//收款方开户行        
+            params.put("amount", amount);
+            params.put("desc", "链鹿平台转账");
+            String refundSign = WXPayUtil.generateSignature(params, iWxPayConfig.getKey());
+		    params.put("sign", refundSign);
+	        
+	        resp = wxpay.payToBank(params);
+	      
+      } catch (Exception e) {
+          e.printStackTrace();
+          logger.info("企业付款到银行卡："+e.getMessage());
+      }
+		return resp;
+
+	}
+	
+	
+	/**
+     * 查询企业付款到银行
+     */
+    @SuppressWarnings("rawtypes")
+    @RequestMapping("/queryBank")
+	@ResponseBody
+	public Map queryBank(HttpServletRequest request) {
+    	Map<String, String> resp = new HashMap<String, String>();
+        try {
+        	IWxPayConfig iWxPayConfig = new IWxPayConfig();
+			WXPay wxpay = new WXPay(iWxPayConfig);
+			String partnertradeno = request.getParameter("partnertradeno");
+			String nonceStr=PayCommonUtil.getRandomString(32);
+            Map<String, String> params = new HashMap<String, String>();
+            params.put("mch_id", iWxPayConfig.getMchID());
+            params.put("nonce_str", nonceStr);
+            params.put("partner_trade_no", partnertradeno);
+            String refundSign = WXPayUtil.generateSignature(params, iWxPayConfig.getKey());
+		    params.put("sign", refundSign);
+		    
+		    resp = wxpay.queryBank(params);
+        } catch (Exception e) {
+            e.printStackTrace();
+            logger.info("查询企业付款到银行卡失败："+e.getMessage());
+        }
+        return resp;
+    }
+    
+    
+   
 }

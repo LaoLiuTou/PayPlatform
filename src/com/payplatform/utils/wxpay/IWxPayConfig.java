@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -22,12 +24,19 @@ public class IWxPayConfig extends WXPayConfig { // 继承sdk WXPayConfig 实现s
 
     private String wx_pay_mch_id;
     
+    private String wx_pay_mch_app_id;
+    
     private String wx_pay_cert_path;
 
     private String app_secret;
     
     private String notify_url;
-    public IWxPayConfig() throws Exception { // 构造方法读取证书, 通过getCertStream 可以使sdk获取到证书
+    
+    private Map<String,String> bankMap;
+    
+    private String pkcs8;
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+	public IWxPayConfig() throws Exception { // 构造方法读取证书, 通过getCertStream 可以使sdk获取到证书
         //String certPath = "/data/config/chidori/apiclient_cert.p12";
     	
     	Properties properties = new Properties();
@@ -39,16 +48,35 @@ public class IWxPayConfig extends WXPayConfig { // 继承sdk WXPayConfig 实现s
 		app_id = properties.getProperty("wx.pay.app_id").trim();  
 		wx_pay_key = properties.getProperty("wx.pay.key").trim();  
 		wx_pay_mch_id = properties.getProperty("wx.pay.mch_id").trim();  
+		wx_pay_mch_app_id = properties.getProperty("wx.pay.mch_appid").trim();  
 		wx_pay_cert_path = properties.getProperty("wx.pay.cert").trim();  
 		app_secret = properties.getProperty("app_secret").trim();  
 		notify_url = properties.getProperty("notify_url").trim();  
-    	
-        System.out.println(wx_pay_cert_path);
+		pkcs8 = properties.getProperty("wx.pay.pkcs8").trim();  
         File file = new File(wx_pay_cert_path);
         InputStream certStream = new FileInputStream(file);
         this.certData = new byte[(int) file.length()];
         certStream.read(this.certData);
         certStream.close();
+        Map temp = new HashMap();
+        temp.put("工商银行","1002");
+        temp.put("农业银行","1005");
+        temp.put("中国银行","1026");
+        temp.put("建设银行","1003");
+        temp.put("招商银行","1001");
+        temp.put("邮储银行","1066");
+        temp.put("交通银行","1020");
+        temp.put("浦发银行","1004");
+        temp.put("民生银行","1006");
+        temp.put("兴业银行","1009");
+        temp.put("平安银行","1010");
+        temp.put("中信银行","1021");
+        temp.put("华夏银行","1025");
+        temp.put("广发银行","1027");
+        temp.put("光大银行","1022");
+        temp.put("北京银行","1032");
+        temp.put("宁波银行","1056");
+        bankMap=temp;
     }
 
     @Override
@@ -59,6 +87,10 @@ public class IWxPayConfig extends WXPayConfig { // 继承sdk WXPayConfig 实现s
     @Override
     public String getMchID() {
         return wx_pay_mch_id;
+    }
+    @Override
+    public String getMchAppID() {
+    	return wx_pay_mch_app_id;
     }
 
     @Override
@@ -73,6 +105,14 @@ public class IWxPayConfig extends WXPayConfig { // 继承sdk WXPayConfig 实现s
     @Override
     public String getNotify_url() {
         return notify_url;
+    }
+    @Override
+    public String getPkcs8() {
+    	return pkcs8;
+    }
+    @Override
+    public Map<String,String> getBankCode() {
+    	return bankMap;
     }
     @Override
     public InputStream getCertStream() {

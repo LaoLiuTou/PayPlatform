@@ -211,6 +211,28 @@ public class WXPay {
             throw new Exception(String.format("return_code value %s is invalid in XML: %s", return_code, xmlStr));
         }
     }
+    public Map<String, String> processResponseXmlPay(String xmlStr) throws Exception {
+    	String RETURN_CODE = "return_code";
+    	String return_code;
+    	Map<String, String> respData = WXPayUtil.xmlToMap(xmlStr);
+    	if (respData.containsKey(RETURN_CODE)) {
+    		return_code = respData.get(RETURN_CODE);
+    	}
+    	else {
+    		throw new Exception(String.format("No `return_code` in XML: %s", xmlStr));
+    	}
+    	
+    	if (return_code.equals(WXPayConstants.FAIL)) {
+    		return respData;
+    	}
+    	else if (return_code.equals(WXPayConstants.SUCCESS)) {
+    		return respData;
+    	 
+    	}
+    	else {
+    		throw new Exception(String.format("return_code value %s is invalid in XML: %s", return_code, xmlStr));
+    	}
+    }
 
     /**
      * 作用：提交刷卡支付<br>
@@ -686,5 +708,97 @@ public class WXPay {
         return this.processResponseXml(respXml);
     }
 
+    
 
+    /**
+     * 作用：企业付款到零钱<br>
+     * @param reqData 向wxpay post的请求数据
+     * @return API返回数据
+     * @throws Exception
+     */
+    public Map<String, String> payToChange(Map<String, String> reqData) throws Exception {
+        return this.payToChange(reqData, config.getHttpConnectTimeoutMs(), this.config.getHttpReadTimeoutMs());
+    }
+
+    /**
+     * 作用：企业付款到零钱<br>
+     * @param reqData 向wxpay post的请求数据
+     * @param connectTimeoutMs 连接超时时间，单位是毫秒
+     * @param readTimeoutMs 读超时时间，单位是毫秒
+     * @return API返回数据
+     * @throws Exception
+     */
+    public Map<String, String> payToChange(Map<String, String> reqData,  int connectTimeoutMs, int readTimeoutMs) throws Exception {
+        String url;
+        if (this.useSandbox) {
+            url = WXPayConstants.SANDBOX_PAYTOCHANGE_URL_SUFFIX;
+        }
+        else {
+            url = WXPayConstants.PAYTOCHANGE_URL_SUFFIX;
+        }
+        String respXml = this.requestWithCert(url, reqData, connectTimeoutMs, readTimeoutMs);
+        return this.processResponseXmlPay(respXml);
+    }
+    /**
+     * 作用：企业付款到银行卡<br>
+     * @param reqData 向wxpay post的请求数据
+     * @return API返回数据
+     * @throws Exception
+     */
+    public Map<String, String> payToBank(Map<String, String> reqData) throws Exception {
+    	return this.payToBank(reqData, config.getHttpConnectTimeoutMs(), this.config.getHttpReadTimeoutMs());
+    }
+    
+    /**
+     * 作用：企业付款到银行卡<br>
+     * @param reqData 向wxpay post的请求数据
+     * @param connectTimeoutMs 连接超时时间，单位是毫秒
+     * @param readTimeoutMs 读超时时间，单位是毫秒
+     * @return API返回数据
+     * @throws Exception
+     */
+    public Map<String, String> payToBank(Map<String, String> reqData,  int connectTimeoutMs, int readTimeoutMs) throws Exception {
+    	String url;
+    	if (this.useSandbox) {
+    		url = WXPayConstants.SANDBOX_PAYTOBANK_URL_SUFFIX;
+    	}
+    	else {
+    		url = WXPayConstants.PAYTOBANK_URL_SUFFIX;
+    	}
+    	String respXml = this.requestWithCert(url, reqData, connectTimeoutMs, readTimeoutMs);
+    	return this.processResponseXmlPay(respXml);
+    }
+
+    /**
+     * 作用：查询企业付款<br>
+     * 场景：刷卡支付、公共号支付、扫码支付、APP支付
+     * @param reqData 向wxpay post的请求数据
+     * @return API返回数据
+     * @throws Exception
+     */
+    public Map<String, String> queryBank(Map<String, String> reqData) throws Exception {
+        return this.queryBank(reqData, config.getHttpConnectTimeoutMs(), this.config.getHttpReadTimeoutMs());
+    }
+
+
+    /**
+     * 作用：查询企业付款<br>
+     * 场景：刷卡支付、公共号支付、扫码支付、APP支付
+     * @param reqData 向wxpay post的请求数据 int
+     * @param connectTimeoutMs 连接超时时间，单位是毫秒
+     * @param readTimeoutMs 读超时时间，单位是毫秒
+     * @return API返回数据
+     * @throws Exception
+     */
+    public Map<String, String> queryBank(Map<String, String> reqData, int connectTimeoutMs, int readTimeoutMs) throws Exception {
+        String url;
+        if (this.useSandbox) {
+            url = WXPayConstants.SANDBOX_QUERY_BANK_URL_SUFFIX;
+        }
+        else {
+            url = WXPayConstants.QUERY_BANK_URL_SUFFIX;
+        }
+        String respXml = this.requestWithCert(url, reqData, connectTimeoutMs, readTimeoutMs);
+        return this.processResponseXmlPay(respXml);
+    }
 } // end class
